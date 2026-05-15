@@ -74,4 +74,31 @@ struct AlarmDifferTests {
         #expect(diff.toCancel.count == 1)
         #expect(diff.toCancel.first == r.id)
     }
+
+    @Test func sameContentDifferentOrderIsNoOp() {
+        let ruleA = UUID()
+        let ruleB = UUID()
+        let r1 = record(eventID: "E1", fireOffset: 10, ruleID: ruleA)
+        let r2 = record(eventID: "E1", fireOffset: 20, ruleID: ruleB)
+        let p1 = plan(eventID: "E1", fireOffset: 20, ruleID: ruleB)
+        let p2 = plan(eventID: "E1", fireOffset: 10, ruleID: ruleA)
+        // existing=[r1,r2], planned=[p1,p2] — 内容同じ・順序逆
+        let diff = AlarmDiffer.diff(existing: [r1, r2], planned: [p1, p2])
+        #expect(diff.toSchedule.isEmpty)
+        #expect(diff.toCancel.isEmpty)
+    }
+
+    @Test func partialUpdateCancelsAndSchedulesOnlyChangedEvent() {
+        let ruleID = UUID()
+        // E1 は変化なし、E2 は fireDate 変更
+        let r1 = record(eventID: "E1", fireOffset: 10, ruleID: ruleID)
+        let r2 = record(eventID: "E2", fireOffset: 10, ruleID: ruleID)
+        let p1 = plan(eventID: "E1", fireOffset: 10, ruleID: ruleID)
+        let p2 = plan(eventID: "E2", fireOffset: 20, ruleID: ruleID)
+        let diff = AlarmDiffer.diff(existing: [r1, r2], planned: [p1, p2])
+        #expect(diff.toCancel.count == 1)
+        #expect(diff.toCancel.first == r2.id)
+        #expect(diff.toSchedule.count == 1)
+        #expect(diff.toSchedule.first?.eventID == "E2")
+    }
 }
