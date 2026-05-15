@@ -77,4 +77,44 @@ struct RuleMatcherTests {
         let rule = makeRule(keywords: ["Project", "review"], matchMode: .all)
         #expect(RuleMatcher.matches(event: event, rule: rule) == false)
     }
+
+    // プラットフォーム独立な照合テスト
+    @Test func fullWidthKeywordMatchesAsciiTitle() {
+        // 全角ｋeyword → 半角タイトルにマッチすること
+        let event = CalendarEvent(
+            id: "E1",
+            title: "meeting",
+            startDate: Date(),
+            endDate: Date(),
+            source: .apple
+        )
+        let rule = AlarmRule(keywords: ["ＭＥＥＴＩＮＧ"], matchMode: .any, leadMinutes: 10)
+        #expect(RuleMatcher.matches(event: event, rule: rule))
+    }
+
+    @Test func caseInsensitiveMatchWorks() {
+        let event = CalendarEvent(
+            id: "E2",
+            title: "Team Standup",
+            startDate: Date(),
+            endDate: Date(),
+            source: .apple
+        )
+        let rule = AlarmRule(keywords: ["standup"], matchMode: .any, leadMinutes: 10)
+        #expect(RuleMatcher.matches(event: event, rule: rule))
+    }
+
+    @Test func allModeRequiresAllKeywords() {
+        let event = CalendarEvent(
+            id: "E3",
+            title: "product review meeting",
+            startDate: Date(),
+            endDate: Date(),
+            source: .apple
+        )
+        let rulePass = AlarmRule(keywords: ["product", "meeting"], matchMode: .all, leadMinutes: 10)
+        let ruleFail = AlarmRule(keywords: ["product", "standup"], matchMode: .all, leadMinutes: 10)
+        #expect(RuleMatcher.matches(event: event, rule: rulePass))
+        #expect(!RuleMatcher.matches(event: event, rule: ruleFail))
+    }
 }

@@ -11,34 +11,33 @@ public struct AlarmDiff: Sendable, Equatable {
 }
 
 public struct AlarmDiffer: Sendable {
+    // (fireDate, ruleID) の組をキーにして比較する内部型
+    private struct AlarmKey: Hashable {
+        let fireDate: Date
+        let ruleID: UUID
+    }
+
     public static func diff(existing: [ScheduledAlarmRecord], planned: [PlannedAlarm]) -> AlarmDiff {
         let existingByEvent = Dictionary(grouping: existing, by: \.eventID)
-        let plannedByEvent = Dictionary(grouping: planned, by: \.eventID)
+        let plannedByEvent  = Dictionary(grouping: planned,  by: \.eventID)
 
-        var toCancel: [UUID] = []
+        var toCancel:   [UUID]         = []
         var toSchedule: [PlannedAlarm] = []
 
-        for (eventID, records) in existingByEvent {
-            if let plans = plannedByEvent[eventID] {
-                // Both exist: compare. If any mismatch, cancel all existing and schedule all planned.
-                let needsUpdate = zip(records, plans).contains { $0.fireDate != $1.fireDate || $0.ruleID != $1.ruleID }
-                    || records.count != plans.count
-                if needsUpdate {
-                    toCancel.append(contentsOf: records.map(\.id))
-                    toSchedule.append(contentsOf: plans)
-                }
-            } else {
-                // No longer planned → cancel
-                toCancel.append(contentsOf: records.map(\.id))
-            }
-        }
+        let allEventIDs = Set(existingByEvent.keys).union(plannedByEvent.keys)
 
-        for (eventID, plans) in plannedByEvent {
-            if existingByEvent[eventID] == nil {
-                // New plan → schedule
-                toSchedule.append(contentsOf: plans)
-            }
-            // Update case is already handled above
+        for eventID in allEventIDs {
+            let records = existingByEvent[eventID] ?? []
+            let plans   = plannedByEvent[eventID]  ?? []
+
+            let existingKeys = Set(records.map { AlarmKey(fireDate: $0.fireDate, ruleID: $0.ruleID) })
+            let plannedKeys  = Set(plans.map   { AlarmKey(fireDate: $0.fireDate, ruleID: $0.ruleID) })
+
+            if existingKeys == plannedKeys { continue } // 変更なし
+
+            // 差分がある → このイベントのアラームをすべて入れ替え
+            toCancel.append(contentsOf: records.map(\.id))
+            toSchedule.append(contentsOf: plans)
         }
 
         return AlarmDiff(toSchedule: toSchedule, toCancel: toCancel)
