@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  core-tests-linux:
+    name: Core Tests (Linux)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Swift
+        uses: swift-actions/setup-swift@v2
+        with:
+          swift-version: "6.0.3"
+
+      - name: Cache Swift packages
+        uses: actions/cache@v4
+        with:
+          path: .build
+          key: ${{ runner.os }}-spm-${{ hashFiles('**/Package.resolved') }}
+          restore-keys: |
+            ${{ runner.os }}-spm-
+
+      - name: Build
+        run: swift build
+
+      - name: Run Core Tests
+        run: swift test
+
+  # 以下は macOS + Xcode 環境が整ったら有効化する
+  # ios-tests-macos:
+  #   name: iOS Tests (macOS)
+  #   runs-on: macos-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - name: Select Xcode
+  #       run: sudo xcode-select -s /Applications/Xcode_16.0.app
+  #     - name: Build and Test
+  #       run: |
+  #         xcodebuild test -project CalendarAlarm.xcodeproj \
+  #           -scheme CalendarAlarm \
+  #           -destination 'platform=iOS Simulator,name=iPhone 16,OS=18.0'
