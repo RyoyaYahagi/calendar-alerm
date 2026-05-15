@@ -1,0 +1,6 @@
+name = "calendar-alarm-contact"
+main = "index.js"
+compatibility_date = "2024-01-01"
+
+# デプロイ後の URL を iOS アプリの ContactIssueService.proxyURL に設定してください
+# 例: https://calendar-alarm-contact.<your-subdomain>.workers.dev
